@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowUpRight,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   Card,
   CardContent,
@@ -22,7 +24,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const ideaCards = [
+type IdeaCard = {
+  title: string;
+  source: string;
+  score: number;
+  theme: string;
+  signal: string;
+};
+
+const ideaCards: IdeaCard[] = [
   {
     title: "AI agents for customer support ops",
     source: "Reddit /r/startups",
@@ -61,6 +71,56 @@ const priorityList = [
 ];
 
 export function ProductDashboard() {
+  const [liveIdeas, setLiveIdeas] = useState<IdeaCard[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadIdeas() {
+      const response = await fetch("/api/admin/ideas", { cache: "no-store" });
+      if (!response.ok || cancelled) {
+        return;
+      }
+      const payload = await response.json();
+      setLiveIdeas(
+        (payload.ideas ?? []).map((idea: Record<string, unknown>) => ({
+          title: String(idea.title),
+          source: String(idea.source),
+          score: Number(idea.urgency ?? 0),
+          theme: String(idea.summary),
+          signal: `${String(idea.category)} signal`,
+        })),
+      );
+    }
+
+    loadIdeas();
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase?.channel("idea-clusters-live").on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "idea_clusters" },
+      (payload) => {
+        const idea = payload.new as Record<string, unknown>;
+        setLiveIdeas((current) => [
+          {
+            title: String(idea.summary_title),
+            source: String(idea.source ?? "public signal"),
+            score: Number(idea.urgency_score ?? 0),
+            theme: String(idea.summary ?? idea.raw_complaint ?? ""),
+            signal: `${String(idea.problem_category ?? idea.category)} signal`,
+          },
+          ...current,
+        ].slice(0, 10));
+      },
+    ).subscribe();
+
+    return () => {
+      cancelled = true;
+      if (channel && supabase) {
+        void supabase.removeChannel(channel);
+      }
+    };
+  }, []);
+
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
       <header className="mb-8 flex items-center justify-between rounded-full border border-white/10 bg-black/30 px-4 py-3 backdrop-blur-xl">
@@ -140,7 +200,7 @@ export function ProductDashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4 pt-5">
-            {ideaCards.map((idea, index) => (
+            {(liveIdeas.length ? liveIdeas : ideaCards).map((idea, index) => (
               <motion.div
                 key={idea.title}
                 initial={{ opacity: 0, y: 14 }}

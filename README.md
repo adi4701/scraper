@@ -24,9 +24,10 @@ Then open http://localhost:3000
 
 ## Supabase setup
 
-1. Create a Supabase project and copy the project URL + anon key into `.env.local`.
+1. Create a Supabase project and copy the project URL + publishable/anon key into `.env.local`.
 2. Apply the schema in `supabase/schema.sql`.
-3. Add any admin email/password user via Supabase Auth for the protected `/admin` route.
+3. Add the service-role key, Upstash REST credentials, Gemini key, and a `CRON_SECRET` to server environments only.
+4. Add an admin email/password user via Supabase Auth for the protected `/admin` route.
 
 ## Key routes
 - `/` — premium landing page
@@ -36,6 +37,9 @@ Then open http://localhost:3000
 ## Supporting files
 - `supabase/schema.sql` — profile + idea cluster schema
 - `scripts/scrape_reddit.py` — Python base for scraping Reddit/X content
+- `.github/workflows/scrape.yml` — four-hour scraper schedule
+- `scripts/enqueue_upstash.py` — pushes normalized posts into the `raw_posts` Redis list
+- `app/api/process-queue/route.ts` — pops one post, processes it with Gemini, persists it, and sends matching Pro alerts
 
 ## Free-tier architecture notes
 - Vercel hosts the UI
@@ -43,3 +47,4 @@ Then open http://localhost:3000
 - GitHub Actions schedules Python ingestion workers
 - Upstash handles async queue orchestration
 - AI processing runs as a post-scrape enrichment stage rather than a real-time bottleneck
+- QStash can call `POST /api/process-queue` with `Authorization: Bearer $CRON_SECRET`; each request processes one queue item.

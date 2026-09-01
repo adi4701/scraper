@@ -1,0 +1,34 @@
+name: PainPoint AI ingestion
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - name: Scrape and enqueue public signals
+        env:
+          PAINPOINT_QUERY: ${{ vars.PAINPOINT_QUERY }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+        run: python scripts/scrape_reddit.py | python scripts/enqueue_upstash.py
+      - name: Trigger one QStash worker delivery
+        if: ${{ secrets.QSTASH_TOKEN != '' && vars.PAINPOINT_WORKER_URL != '' }}
+        env:
+          QSTASH_TOKEN: ${{ secrets.QSTASH_TOKEN }}
+          PAINPOINT_WORKER_URL: ${{ vars.PAINPOINT_WORKER_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body -X POST "https://qstash.upstash.io/v2/publish/${PAINPOINT_WORKER_URL}" \
+            -H "Authorization: Bearer ${QSTASH_TOKEN}" \
+            -H "Upstash-Forward-Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{"source":"github-actions"}'

@@ -1,5 +1,6 @@
 import json
 import os
+import hashlib
 from typing import Any, Dict, List
 
 import requests
@@ -61,10 +62,26 @@ def main() -> None:
     reddit_posts = fetch_reddit_posts(query)
     twitter_posts = fetch_twitter_posts(query)
 
+    posts = reddit_posts + twitter_posts
+    normalized = [
+        {
+            "id": str(
+                item.get("id")
+                or f"hn-{hashlib.sha256(str(item.get('url') or item.get('title') or index).encode()).hexdigest()[:24]}"
+            ),
+            "author": str(item.get("author") or "unknown"),
+            "title": str(item.get("title") or ""),
+            "selftext": str(item.get("selftext") or ""),
+            "source_url": str(item.get("url") or ""),
+            "source": str(item.get("source") or "public"),
+        }
+        for index, item in enumerate(posts)
+        if item.get("title") or item.get("selftext")
+    ]
+
     result = {
         "query": query,
-        "reddit": reddit_posts,
-        "twitter": twitter_posts,
+        "posts": normalized,
     }
 
     print(json.dumps(result, indent=2))
