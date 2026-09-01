@@ -6,6 +6,7 @@
 - Product dashboard route at `/dashboard` remains the live signal board for market intelligence exploration.
 - Supabase foundation has been prepared with a browser/server client setup and an admin auth gate for protected access.
 - Local Supabase project configuration is now wired through `.env.local`, with support for both publishable-key and legacy anon-key variable names.
+- Local Upstash Redis REST configuration is now wired through `.env.local`; credentials remain ignored and are not committed.
 - The scraper has been updated to use public fallback sources because Reddit and Nitter are blocked from this runtime.
 
 ## Backend architecture to implement next
@@ -28,3 +29,4 @@
 - The environment blocks direct Reddit and Nitter access, so the scraper intentionally uses public, accessible alternatives to keep the ingestion layer alive and operational.
 - The backend design follows the event-driven, serverless blueprint from the architecture doc: ingest -> queue -> LLM worker -> Supabase -> realtime dashboard.
 - Next production step: create the Supabase schema in the configured project and replace the local demo store with authenticated Supabase reads and writes.
+- Next queue step: add the same Upstash values as GitHub Actions secrets before enabling scheduled cloud ingestion.
