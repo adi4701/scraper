@@ -27,7 +27,7 @@ export async function processWithGemini(input: {
   }
 
   const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({
-    model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
+    model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
     generationConfig: {
       responseMimeType: "application/json",
       temperature: 0.1,

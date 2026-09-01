@@ -7,6 +7,7 @@
 - Supabase foundation has been prepared with a browser/server client setup and an admin auth gate for protected access.
 - Local Supabase project configuration is now wired through `.env.local`, with support for both publishable-key and legacy anon-key variable names.
 - Local Upstash Redis REST configuration is now wired through `.env.local`; credentials remain ignored and are not committed.
+- Gemini credentials are configured locally; the worker uses the currently supported `gemini-3.6-flash` model by default.
 - The scraper has been updated to use public fallback sources because Reddit and Nitter are blocked from this runtime.
 
 ## Backend architecture to implement next
