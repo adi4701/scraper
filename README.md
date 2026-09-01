@@ -48,3 +48,4 @@ Then open http://localhost:3000
 - Upstash handles async queue orchestration
 - AI processing runs as a post-scrape enrichment stage rather than a real-time bottleneck
 - QStash can call `POST /api/process-queue` with `Authorization: Bearer $CRON_SECRET`; each request processes one queue item.
+- To test Resend, replace `re_xxxxxxxxx` in `.env.local` with your real API key, then send a `POST` request to `/api/send-test-email`.

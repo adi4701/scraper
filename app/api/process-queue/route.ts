@@ -4,6 +4,7 @@ import { processWithGemini } from "@/lib/ai";
 import { dequeuePost, type RawPost } from "@/lib/queue";
 import { ingestIdeas } from "@/lib/demo-store";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createResendClient } from "@/lib/resend";
 
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -11,9 +12,9 @@ function isAuthorized(request: Request) {
 }
 
 async function notifyMatchingProUsers(competitor: string | null) {
-  const resendKey = process.env.RESEND_API_KEY;
+  const resend = createResendClient();
   const supabase = createSupabaseAdminClient();
-  if (!resendKey || !supabase || !competitor) {
+  if (!resend || !supabase || !competitor) {
     return 0;
   }
 
@@ -34,21 +35,14 @@ async function notifyMatchingProUsers(competitor: string | null) {
     return 0;
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL || "PainPoint AI <alerts@painpoint.ai>",
-      to: recipients,
-      subject: `New competitor lead: ${competitor}`,
-      text: `PainPoint AI detected a new complaint mentioning ${competitor}.`,
-    }),
+  const { error: resendError } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL || "PainPoint AI <alerts@painpoint.ai>",
+    to: recipients,
+    subject: `New competitor lead: ${competitor}`,
+    text: `PainPoint AI detected a new complaint mentioning ${competitor}.`,
   });
-  if (!response.ok) {
-    throw new Error(`Resend request failed with status ${response.status}`);
+  if (resendError) {
+    throw resendError;
   }
 
   return recipients.length;
